@@ -1,0 +1,33 @@
+#!/usr/bin/env ansible-playbook
+---
+- name: Remove instance
+  hosts: pve_server
+  vars_files: ../../vars.yml
+
+  tasks:
+  - name: Check if all required variables are provided
+    ansible.builtin.fail:
+      msg: "Required variable '{{ item }}' is missing!"
+    when: vars[item] is not defined
+    loop:
+      - vm_id
+
+  - name: Stop instance {{ vm_id }}
+    community.general.proxmox:
+      api_host: "{{ pve_node_name }}"
+      api_user: "{{ api_user }}"
+      api_token_id: "{{ api_token_id }}"
+      api_token_secret: "{{ api_token_secret }}"
+      node: "{{ pve_node_name }}"
+      vmid: "{{ vm_id }}"
+      state: stopped
+
+  - name: Remove instance {{ vm_id }}
+    community.general.proxmox:
+      api_host: "{{ pve_node_name }}"
+      api_user: "{{ api_user }}"
+      api_token_id: "{{ api_token_id }}"
+      api_token_secret: "{{ api_token_secret }}"
+      node: "{{ pve_node_name }}"
+      vmid: "{{ vm_id }}"
+      state: absent

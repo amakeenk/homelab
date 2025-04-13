@@ -1,0 +1,12 @@
+http:
+  routers:
+    dashboard:
+      rule: "Host(`traefik.{{ domain }}`) && (PathPrefix(`/api`) || PathPrefix(`/dashboard`))"
+      service: "api@internal"
+      entrypoints: "https"
+      middlewares: "auth"
+      tls: true
+  middlewares:
+    auth:
+      basicAuth:
+        users: ["{{ basic_auth }}",]

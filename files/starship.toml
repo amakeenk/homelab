@@ -1,0 +1,66 @@
+format = """
+$time\
+$hostname\
+$localip\
+$cmd_duration\
+$username\
+$directory\
+$git_branch\
+$git_status\
+$status\
+$character"""
+
+add_newline = false
+
+[time]
+disabled = false
+format = "[$time]($style) "
+style = "bold purple"
+
+[hostname]
+ssh_only = false
+trim_at = ''
+format = 'container [$hostname](bold blue) '
+
+[localip]
+ssh_only = false
+format = '[$localipv4](bold blue) '
+disabled = false
+
+[cmd_duration]
+min_time = 500
+format = "[$duration]($style) "
+style = "bold purple"
+
+[username]
+disabled = false
+format = "[$user]($style) "
+style_user = "bold blue"
+show_always = true
+
+[directory]
+disabled = false
+format = "[$path]($style) "
+truncation_length = 8
+truncation_symbol = "…/"
+truncate_to_repo = false
+
+[git_branch]
+disabled = false
+format = "[$symbol$branch(:$remote_branch)]($style) "
+
+[git_status]
+disabled = false
+format = "([$all_status$ahead_behind]($style) )"
+
+[status]
+disabled = false
+success_symbol = ''
+format = "[$status]($style) "
+map_symbol = true
+
+[character]
+disabled = false
+success_symbol = "[\\$](bold green)"
+error_symbol = "[\\$](bold green)"
+format = "$symbol "

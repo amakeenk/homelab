@@ -1,0 +1,33 @@
+[global]
+  checkNewVersion = false
+  sendAnonymousUsage = false
+[entryPoints]
+  [entryPoints.http]
+    address = ":80"
+    [entryPoints.http.http.redirections.entryPoint]
+      to = "https"
+      scheme = "https"
+[entryPoints.https]
+    address = ":443"
+[entryPoints.https.http.tls]
+    certResolver = "letsencrypt"
+[log]
+    level = "INFO"
+    filepath = "/var/log/traefik/traefik.log"
+[accessLog]
+    filepath = "/var/log/traefik/access.log"
+[accessLog.fields]
+    defaultMode = "keep"
+[accessLog.fields.headers]
+    defaultMode = "keep"
+[api]
+    dashboard = true
+    insecure = false
+[providers]
+  [providers.file]
+    directory = "/etc/traefik/traefik.d"
+    watch = true
+[certificatesResolvers.letsencrypt.acme]
+  email = "{{ letsencrypt_email }}"
+  storage = "/etc/traefik/acme.json"
+  tlsChallenge = true

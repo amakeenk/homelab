@@ -1,0 +1,69 @@
+---
+- name: Check if all required variables are provided
+  ansible.builtin.fail:
+    msg: "Required variable '{{ item }}' is missing!"
+  when: vars[item] is not defined
+  loop:
+    - template_id
+    - new_vm_id
+    - new_hostname
+
+- name: Include common variables
+  ansible.builtin.include_vars:
+    file: ../../../vars.yml
+
+- name: Create full clone of template {{ template_id }}
+  community.general.proxmox:
+    api_host: "{{ pve_node_name }}"
+    api_user: "{{ api_user }}"
+    api_token_id: "{{ api_token_id }}"
+    api_token_secret: "{{ api_token_secret }}"
+    node: "{{ pve_node_name }}"
+    storage: "{{ storage_name }}"
+    clone: "{{ template_id }}"
+    clone_type: "full"
+    vmid: "{{ new_vm_id }}"
+    hostname: "{{ new_hostname }}"
+
+- name: Wait for instance to clone
+  pause:
+    seconds: 10
+
+- name: Start instance
+  community.general.proxmox:
+    api_host: "{{ pve_node_name }}"
+    api_user: "{{ api_user }}"
+    api_token_id: "{{ api_token_id }}"
+    api_token_secret: "{{ api_token_secret }}"
+    node: "{{ pve_node_name }}"
+    vmid: "{{ new_vm_id }}"
+    state: started
+
+- name: Wait for instance to start
+  pause:
+    seconds: 20
+
+- name: Get instance info
+  community.general.proxmox_vm_info:
+    api_host: "{{ pve_node_name }}"
+    api_user: "{{ api_user }}"
+    api_token_id: "{{ api_token_id }}"
+    api_token_secret: "{{ api_token_secret }}"
+    node: "{{ pve_node_name }}"
+    vmid: "{{ new_vm_id }}"
+    network: true
+  register: instance_info
+
+- name: Set instance IP as fact
+  ansible.builtin.set_fact:
+    instance_ip: "{{ (instance_info.proxmox_vms[0].network | json_query('[?name!=`lo`].inet') | first).split('/')[0] }}"
+
+- name: Prints instance IP
+  ansible.builtin.debug:
+    msg:
+      - "{{ instance_ip }}"
+
+- name: Add instance to temporary inventory
+  ansible.builtin.add_host:
+    name: "{{ instance_ip }}"
+    ansible_host: "{{ instance_ip }}"

@@ -1,0 +1,8 @@
+all:
+  hosts:
+    pve_server:
+      ansible_host: pve
+  vars:
+    ansible_ssh_user: root
+    ansible_python_interpreter: /usr/bin/python3
+    ssh_key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"

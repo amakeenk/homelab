@@ -1,0 +1,24 @@
+# pve
+pve_node_name:
+storage_name:
+api_user:
+api_token_id:
+api_token_secret:
+# lxc templates
+lxc_password:
+lxc_init_template_url:
+lxc_init_template_name:
+lxc_init_template_local_path:
+lxc_init_template_vmid_priv:
+lxc_init_template_hostname_priv:
+lxc_init_template_vmid_unpriv:
+lxc_init_template_hostname_unpriv:
+memory_size:
+swap_size:
+disk_size:
+cores_count:
+network_iface:
+# traefik
+letsencrypt_email:
+domain:
+basic_auth:

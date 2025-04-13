@@ -1,0 +1,233 @@
+#!/usr/bin/env ansible-playbook
+---
+- name: Create privileged and unprivileged LXC container's templates
+  hosts: pve_server
+  vars_files: ../../vars.yml
+  tasks:
+    - name: Download LXC template
+      community.general.proxmox_template:
+        api_host: "{{ pve_node_name }}"
+        api_user: "{{ api_user }}"
+        api_token_id: "{{ api_token_id }}"
+        api_token_secret: "{{ api_token_secret }}"
+        node: "{{ pve_node_name }}"
+        storage: local
+        url: "{{ lxc_init_template_url }}"
+        force: true
+
+    - name: Create privileged LXC container
+      community.general.proxmox:
+        api_host: "{{ pve_node_name }}"
+        api_user: "{{ api_user }}"
+        api_token_id: "{{ api_token_id }}"
+        api_token_secret: "{{ api_token_secret }}"
+        node: "{{ pve_node_name }}"
+        vmid: "{{ lxc_init_template_vmid_priv }}"
+        hostname: "{{ lxc_init_template_hostname_priv }}"
+        ostemplate: "{{ lxc_init_template_local_path }}"
+        memory: "{{ memory_size }}"
+        swap: "{{ swap_size }}"
+        cores: "{{ cores_count }}"
+        disk_volume:
+          storage: "{{ storage_name }}"
+          size: "{{ disk_size }}"
+        password: "{{ lxc_password }}"
+        state: present
+        pubkey: "{{ ssh_key }}"
+        netif: "{{ network_iface }}"
+        timezone: host
+        unprivileged: false
+
+    - name: Create unprivileged LXC container
+      community.general.proxmox:
+        api_host: "{{ pve_node_name }}"
+        api_user: "{{ api_user }}"
+        api_token_id: "{{ api_token_id }}"
+        api_token_secret: "{{ api_token_secret }}"
+        node: "{{ pve_node_name }}"
+        vmid: "{{ lxc_init_template_vmid_unpriv }}"
+        hostname: "{{ lxc_init_template_hostname_unpriv }}"
+        ostemplate: "{{ lxc_init_template_local_path }}"
+        memory: "{{ memory_size }}"
+        swap: "{{ swap_size }}"
+        cores: "{{ cores_count }}"
+        disk_volume:
+          storage: "{{ storage_name }}"
+          size: "{{ disk_size }}"
+        password: "{{ lxc_password }}"
+        state: present
+        pubkey: "{{ ssh_key }}"
+        netif: "{{ network_iface }}"
+        timezone: host
+        unprivileged: true
+
+    - name: Wait for containers to clone
+      pause:
+        seconds: 10
+
+    - name: Start containers
+      community.general.proxmox:
+        api_host: "{{ pve_node_name }}"
+        api_user: "{{ api_user }}"
+        api_token_id: "{{ api_token_id }}"
+        api_token_secret: "{{ api_token_secret }}"
+        node: "{{ pve_node_name }}"
+        vmid: "{{ item }}"
+        state: started
+      loop:
+        - "{{ lxc_init_template_vmid_priv | int }}"
+        - "{{ lxc_init_template_vmid_unpriv | int }}"
+
+    - name: Wait for containers to start
+      pause:
+        seconds: 10
+
+    - name: Get unprivileged container info
+      community.general.proxmox_vm_info:
+        api_host: "{{ pve_node_name }}"
+        api_user: "{{ api_user }}"
+        api_token_id: "{{ api_token_id }}"
+        api_token_secret: "{{ api_token_secret }}"
+        node: "{{ pve_node_name }}"
+        vmid: "{{ lxc_init_template_vmid_unpriv }}"
+        network: true
+      register: unpriv_container_info
+
+    - name: Get privileged container info
+      community.general.proxmox_vm_info:
+        api_host: "{{ pve_node_name }}"
+        api_user: "{{ api_user }}"
+        api_token_id: "{{ api_token_id }}"
+        api_token_secret: "{{ api_token_secret }}"
+        node: "{{ pve_node_name }}"
+        vmid: "{{ lxc_init_template_vmid_priv }}"
+        network: true
+      register: priv_container_info
+
+    - name: Set container's IP as facts
+      ansible.builtin.set_fact:
+        unpriv_container_ip: "{{ (unpriv_container_info.proxmox_vms[0].network | json_query('[?name!=`lo`].inet') | first).split('/')[0] }}"
+        priv_container_ip: "{{ (priv_container_info.proxmox_vms[0].network | json_query('[?name!=`lo`].inet') | first).split('/')[0] }}"
+
+    - name: Prints containers IPs
+      ansible.builtin.debug:
+        msg:
+          - "{{ unpriv_container_ip }}"
+          - "{{ priv_container_ip }}"
+
+    - name: Add container to temporary inventory
+      ansible.builtin.add_host:
+        name: "{{ item }}"
+        ansible_host: "{{ item }}"
+      loop:
+        - "{{ unpriv_container_ip }}"
+        - "{{ priv_container_ip }}"
+
+- name: Configure containers
+  hosts:
+    - "{{ hostvars['pve_server']['unpriv_container_ip'] }}"
+    - "{{ hostvars['pve_server']['priv_container_ip'] }}"
+  vars_files: ../../vars.yml
+  gather_facts: false
+  tasks:
+    - name: Install python3
+      ansible.builtin.raw: |
+        apt-get update
+        apt-get install -y python3
+
+    - name: Perform system upgrade
+      community.general.apt_rpm:
+        dist_upgrade: true
+
+    - name: Install packages
+      community.general.apt_rpm:
+        name:
+          - apt-repo
+          - bottom
+          - curl
+          - duf
+          - fd
+          - gdu
+          - git-core
+          - ripgrep
+          - starship
+          - vim-console
+          - wget
+        state: present
+
+    - name: Configure vimrc
+      ansible.builtin.lineinfile:
+        path: /etc/vim/vimrc
+        regexp: "^set backup.*$"
+        state: absent
+
+    - name: Configure bashrc
+      ansible.builtin.blockinfile:
+        path: /root/.bashrc
+        block: |
+          alias ll='ls -l'
+          alias rm='rm -v'
+          alias df='duf /'
+          alias u='apt-get update'
+          alias ud='u && apt-get -V dist-upgrade'
+          alias ara='apt-repo add'
+          alias arm='apt-repo rm'
+          alias art='apt-repo test'
+          alias arl='apt-repo list'
+          alias agip='u && apt-get -V install'
+          alias agrp='apt-get -V remove'
+          alias acs='apt-cache search'
+          alias acwd='apt-cache whatdepends'
+          alias sstat='systemctl status'
+          alias sstart='systemctl start'
+          alias sstop='systemctl stop'
+          alias ssres='systemctl restart'
+          alias gpl='git pull'
+          alias gst='git status'
+          alias cleannodepslibs='agrp $(apt-cache list-nodeps | grep -E "devel|^lib[^-]*$")'
+          eval "$(starship init bash)"
+        state: present
+
+    - name: Create local config dir
+      ansible.builtin.file:
+        path: /root/.config
+        state: directory
+
+    - name: Configure starship
+      ansible.builtin.copy:
+        src: ../../files/starship.toml
+        dest: /root/.config/starship.toml
+
+- name: Create templates
+  hosts: pve_server
+  vars_files: ../../vars.yml
+  tasks:
+    - name: Stop containers
+      community.general.proxmox:
+        api_host: "{{ pve_node_name }}"
+        api_user: "{{ api_user }}"
+        api_token_id: "{{ api_token_id }}"
+        api_token_secret: "{{ api_token_secret }}"
+        node: "{{ pve_node_name }}"
+        vmid: "{{ item }}"
+        state: stopped
+      loop:
+        - "{{ lxc_init_template_vmid_priv | int }}"
+        - "{{ lxc_init_template_vmid_unpriv | int }}"
+
+    - name: Wait for containers to stop
+      pause:
+        seconds: 10
+
+    - name: Create templates
+      community.general.proxmox:
+        api_host: "{{ pve_node_name }}"
+        api_user: "{{ api_user }}"
+        api_token_id: "{{ api_token_id }}"
+        api_token_secret: "{{ api_token_secret }}"
+        node: "{{ pve_node_name }}"
+        vmid: "{{ item }}"
+        state: template
+      loop:
+        - "{{ lxc_init_template_vmid_priv | int }}"
+        - "{{ lxc_init_template_vmid_unpriv | int }}"

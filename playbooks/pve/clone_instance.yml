@@ -1,0 +1,15 @@
+#!/usr/bin/env ansible-playbook
+---
+- name: Clone instance
+  hosts: pve_server
+  roles:
+    - role: ../../roles/clone_template
+
+- name: Update instance
+  hosts: "{{ hostvars['pve_server']['instance_ip'] }}"
+  vars_files: ../../vars.yml
+  tasks:
+    - name: Perform system upgrade
+      community.general.apt_rpm:
+        update_cache: true
+        dist_upgrade: true
