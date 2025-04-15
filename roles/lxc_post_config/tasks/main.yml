@@ -1,0 +1,40 @@
+---
+- name: Check if all required variables are provided
+  ansible.builtin.fail:
+    msg: "Required variable '{{ item }}' is missing!"
+  when: vars[item] is not defined
+  loop:
+    - new_vm_id
+    - new_hostname
+
+- name: Include common variables
+  ansible.builtin.include_vars:
+      file: ../../../vars.yml
+
+- name: Set static instance IP as fact
+  ansible.builtin.set_fact:
+    static_instance_ip: "{{ network_gateway_ip.split('.')[0:3] | join('.') }}.{{ new_vm_id }}"
+
+- name: Prints static instance IP
+  ansible.builtin.debug:
+    msg:
+      - "{{ static_instance_ip }}"
+
+- name: Enable onboot start and set static IP
+  community.general.proxmox:
+    api_host: "{{ pve_node_name }}"
+    api_user: "{{ api_user }}"
+    api_token_id: "{{ api_token_id }}"
+    api_token_secret: "{{ api_token_secret }}"
+    node: "{{ pve_node_name }}"
+    vmid: "{{ new_vm_id }}"
+    hostname: "{{ new_hostname }}"
+    onboot: true
+    netif:
+      net0: "name=eth0,gw={{ network_gateway_ip }},ip={{ static_instance_ip }}/24,bridge=vmbr0"
+    update: true
+
+- name: Add instance to temporary inventory
+  ansible.builtin.add_host:
+    name: "{{ static_instance_ip }}"
+    ansible_host: "{{ static_instance_ip }}"
