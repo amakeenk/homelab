@@ -6,21 +6,10 @@
     new_hostname: traefik
   roles:
     - role: ../../roles/clone_template
-  tasks:
-    - name: Enable onboot start
-      community.general.proxmox:
-        api_host: "{{ pve_node_name }}"
-        api_user: "{{ api_user }}"
-        api_token_id: "{{ api_token_id }}"
-        api_token_secret: "{{ api_token_secret }}"
-        node: "{{ pve_node_name }}"
-        vmid: "{{ new_vm_id }}"
-        hostname: "{{ new_hostname }}"
-        onboot: true
-        update: true
+    - role: ../../roles/lxc_post_config
 
 - name: Configure traefik
-  hosts: "{{ hostvars['pve_server']['instance_ip'] }}"
+  hosts: "{{ hostvars['pve_server']['static_instance_ip'] }}"
   tasks:
     - name: Include common variables
       ansible.builtin.include_vars:
