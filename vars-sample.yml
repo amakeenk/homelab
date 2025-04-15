@@ -18,6 +18,7 @@ swap_size:
 disk_size:
 cores_count:
 network_iface:
+network_gateway_ip:
 # traefik
 letsencrypt_email:
 domain:
