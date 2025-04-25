@@ -196,7 +196,7 @@
 
     - name: Configure starship
       ansible.builtin.copy:
-        src: ../../files/starship.toml
+        src: ./files/starship.toml
         dest: /root/.config/starship.toml
 
 - name: Create templates
