@@ -15,7 +15,7 @@
   ansible.builtin.set_fact:
     static_instance_ip: "{{ network_gateway_ip.split('.')[0:3] | join('.') }}.{{ new_vm_id }}"
 
-- name: Prints static instance IP
+- name: Print static instance IP
   ansible.builtin.debug:
     msg:
       - "{{ static_instance_ip }}"

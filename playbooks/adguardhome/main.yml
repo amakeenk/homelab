@@ -1,0 +1,58 @@
+#!/usr/bin/env ansible-playbook
+---
+- name: Clone template
+  hosts: pve_server
+  vars:
+    new_hostname: adguardhome
+  roles:
+    - role: ../../roles/clone_template
+    - role: ../../roles/lxc_post_config
+
+- name: Configure adguardhome
+  hosts: "{{ hostvars['pve_server']['static_instance_ip'] }}"
+  tasks:
+    - name: Include common variables
+      ansible.builtin.include_vars:
+        file: ../../vars.yml
+
+    - name: Perform system upgrade
+      community.general.apt_rpm:
+        update_cache: true
+        dist_upgrade: true
+
+    - name: Reboot system
+      ansible.builtin.reboot:
+        connect_timeout: 10
+        reboot_timeout: 60
+
+    - name: Install adguardhome
+      community.general.apt_rpm:
+        name:
+          - adguardhome
+        state: present
+
+    - name: Create directory /etc/systemd/resolved.conf.d
+      ansible.builtin.file:
+        path: /etc/systemd/resolved.conf.d
+        state: directory
+
+    - name: Configure systemd-resolved
+      ansible.builtin.copy:
+        src: ./files/systemd-resolved.conf
+        dest: /etc/systemd/resolved.conf.d/adguardhome.conf
+
+    - name: Restart systemd-resolved service
+      ansible.builtin.systemd:
+        name: systemd-resolved
+        state: restarted
+
+    - name: Start adguardhome service
+      ansible.builtin.systemd:
+        name: adguardhome
+        state: started
+        enabled: yes
+
+    - name: Show adguardhome setup URL
+      ansible.builtin.debug:
+        msg:
+          - "http://{{ hostvars['pve_server']['static_instance_ip'] }}:3000"

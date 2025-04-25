@@ -58,7 +58,7 @@
   ansible.builtin.set_fact:
     instance_ip: "{{ (instance_info.proxmox_vms[0].network | json_query('[?name!=`lo`].inet') | first).split('/')[0] }}"
 
-- name: Prints instance IP
+- name: Print instance IP
   ansible.builtin.debug:
     msg:
       - "{{ instance_ip }}"
