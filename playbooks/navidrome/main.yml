@@ -1,0 +1,70 @@
+#!/usr/bin/env ansible-playbook
+---
+- name: Clone template
+  hosts: pve_server
+  vars:
+    new_hostname: navidrome
+  roles:
+    - role: ../../roles/clone_template
+    - role: ../../roles/lxc_post_config
+
+- name: Configure navidrome
+  hosts: "{{ hostvars['pve_server']['static_instance_ip'] }}"
+  tasks:
+    - name: Include common variables
+      ansible.builtin.include_vars:
+        file: ../../vars.yml
+
+    - name: Perform system upgrade
+      community.general.apt_rpm:
+        update_cache: true
+        dist_upgrade: true
+
+    - name: Reboot system
+      ansible.builtin.reboot:
+        connect_timeout: 10
+        reboot_timeout: 60
+
+    - name: Install navidrome
+      community.general.apt_rpm:
+        name:
+          - navidrome
+        state: present
+
+    - name: Configure navidrome
+      ansible.builtin.blockinfile:
+        path: /etc/navidrome.toml
+        block: |
+          MusicFolder = "/mnt/music"
+          UILoginBackgroundUrl = "https://images.hdqwalls.com/download/marshmello-ducktales-4k-2019-20-3840x2160.jpg"
+
+    - name: Create directory for music
+      ansible.builtin.file:
+        path: /mnt/music
+        state: directory
+
+    - name: Create directory for navidrome.service drop-in config
+      ansible.builtin.file:
+        path: /etc/systemd/system/navidrome.service.d
+        state: directory
+
+    - name: Add navidrome.service drop-in config
+      ansible.builtin.blockinfile:
+        path: /etc/systemd/system/navidrome.service.d/override.conf
+        block: |
+          [Service]
+          # allow run in lxc
+          PrivateUsers=no
+          SystemCallFilter=~@setuid
+        create: yes
+
+    - name: Start navidrome service
+      ansible.builtin.systemd:
+        name: navidrome
+        state: started
+        enabled: yes
+
+    - name: Show navidrome setup URL
+      ansible.builtin.debug:
+        msg:
+          - "http://{{ hostvars['pve_server']['static_instance_ip'] }}:4533"
