@@ -1,0 +1,75 @@
+#!/usr/bin/env ansible-playbook
+---
+- name: Clone template
+  hosts: pve_server
+  vars:
+    new_hostname: qbittorrent
+  roles:
+    - role: ../../roles/clone_template
+    - role: ../../roles/lxc_post_config
+
+- name: Configure qbittorrent
+  hosts: "{{ hostvars['pve_server']['static_instance_ip'] }}"
+  tasks:
+    - name: Include common variables
+      ansible.builtin.include_vars:
+        file: ../../vars.yml
+
+    - name: Perform system upgrade
+      community.general.apt_rpm:
+        update_cache: true
+        dist_upgrade: true
+
+    - name: Reboot system
+      ansible.builtin.reboot:
+        connect_timeout: 10
+        reboot_timeout: 60
+
+    - name: Install qbittorrent-nox and unzip
+      community.general.apt_rpm:
+        name:
+          - qbittorrent-nox
+          - unzip
+        state: present
+
+    - name: Download and extract vuetorrent archive
+      ansible.builtin.unarchive:
+        src: https://github.com/VueTorrent/VueTorrent/releases/latest/download/vuetorrent.zip
+        dest: /opt
+        remote_src: yes
+
+    - name: Create user qbit
+      ansible.builtin.user:
+        name: qbit
+        state: present
+        shell: /bin/bash
+        create_home: yes
+
+    - name: Create directory for torrents
+      ansible.builtin.file:
+        path: /mnt/torrents
+        state: directory
+
+    - name: Start qbittorrent-nox@qbit service
+      ansible.builtin.systemd:
+        name: qbittorrent-nox@qbit
+        state: started
+        enabled: yes
+
+    - name: Get logs of qbittorrent-nox@qbit service
+      ansible.builtin.command: >
+        journalctl -u qbittorrent-nox@qbit.service --no-pager -n 10
+      register: service_logs
+      changed_when: false
+
+    - name: Get password for admin
+      ansible.builtin.set_fact:
+        temp_password: "{{ (service_logs.stdout | regex_search('password is provided for this session: .+')).split(': ')[1] }}"
+
+    - name: Show qbittorrent URL
+      ansible.builtin.debug:
+        msg:
+          - "URL: http://{{ hostvars['pve_server']['static_instance_ip'] }}:8080"
+          - "User: admin"
+          - "Password: {{ temp_password }}"
+          - "VueTorrent UI path: /opt/vuetorrent"
