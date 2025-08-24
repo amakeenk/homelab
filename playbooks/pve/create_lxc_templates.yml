@@ -150,9 +150,11 @@
           - gdu
           - git-core
           - lsof
+          - nfs-utils
           - ripgrep
           - starship
           - vim-console
+          - unzip
           - wget
         state: present
 

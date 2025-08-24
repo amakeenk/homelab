@@ -7,6 +7,7 @@
     - template_id
     - new_vm_id
     - new_hostname
+    - temporary
 
 - name: Include common variables
   ansible.builtin.include_vars:
@@ -27,7 +28,16 @@
 
 - name: Wait for instance to clone
   pause:
-    seconds: 10
+    seconds: 15
+
+- name: Allow running docker containers
+  blockinfile:
+    path: "/etc/pve/lxc/{{ new_vm_id }}.conf"
+    block: |
+      lxc.apparmor.profile: unconfined
+      lxc.cgroup2.devices.allow: a
+      lxc.cap.drop:
+  when: for_docker == "yes"
 
 - name: Start instance
   community.general.proxmox:
@@ -41,7 +51,7 @@
 
 - name: Wait for instance to start
   pause:
-    seconds: 20
+    seconds: 25
 
 - name: Get instance info
   community.general.proxmox_vm_info:
