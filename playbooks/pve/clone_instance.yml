@@ -19,3 +19,27 @@
       ansible.builtin.reboot:
         connect_timeout: 10
         reboot_timeout: 60
+
+    - name: Install docker packages
+      community.general.apt_rpm:
+        name:
+          - docker-engine
+          - docker-compose
+      when: for_docker == "yes"
+
+    - name: Configure docker daemon.json
+      ansible.builtin.lineinfile:
+        path: /etc/docker/daemon.json
+        line: '"hosts": ["unix:///var/run/docker.sock", "tcp://0.0.0.0:2375"],'
+        insertafter: '^\s*\{\s*$'
+        firstmatch: true
+        state: present
+        create: no
+      when: for_docker == "yes"
+
+    - name: Start docker service
+      ansible.builtin.systemd:
+        name: docker
+        state: started
+        enabled: yes
+      when: for_docker == "yes"

@@ -13,7 +13,7 @@
       - vm_id
 
   - name: Stop instance {{ vm_id }}
-    community.general.proxmox:
+    community.proxmox.proxmox:
       api_host: "{{ pve_node_name }}"
       api_user: "{{ api_user }}"
       api_token_id: "{{ api_token_id }}"
@@ -23,7 +23,7 @@
       state: stopped
 
   - name: Remove instance {{ vm_id }}
-    community.general.proxmox:
+    community.proxmox.proxmox:
       api_host: "{{ pve_node_name }}"
       api_user: "{{ api_user }}"
       api_token_id: "{{ api_token_id }}"

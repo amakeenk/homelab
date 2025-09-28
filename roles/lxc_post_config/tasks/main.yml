@@ -21,7 +21,7 @@
       - "{{ static_instance_ip }}"
 
 - name: Enable onboot start and set static IP
-  community.general.proxmox:
+  community.proxmox.proxmox:
     api_host: "{{ pve_node_name }}"
     api_user: "{{ api_user }}"
     api_token_id: "{{ api_token_id }}"

@@ -5,7 +5,7 @@
   vars_files: ../../vars.yml
   tasks:
     - name: Download LXC template
-      community.general.proxmox_template:
+      community.proxmox.proxmox_template:
         api_host: "{{ pve_node_name }}"
         api_user: "{{ api_user }}"
         api_token_id: "{{ api_token_id }}"
@@ -16,7 +16,7 @@
         force: true
 
     - name: Create privileged LXC container
-      community.general.proxmox:
+      community.proxmox.proxmox:
         api_host: "{{ pve_node_name }}"
         api_user: "{{ api_user }}"
         api_token_id: "{{ api_token_id }}"
@@ -39,7 +39,7 @@
         unprivileged: false
 
     - name: Create unprivileged LXC container
-      community.general.proxmox:
+      community.proxmox.proxmox:
         api_host: "{{ pve_node_name }}"
         api_user: "{{ api_user }}"
         api_token_id: "{{ api_token_id }}"
@@ -66,7 +66,7 @@
         seconds: 10
 
     - name: Start containers
-      community.general.proxmox:
+      community.proxmox.proxmox:
         api_host: "{{ pve_node_name }}"
         api_user: "{{ api_user }}"
         api_token_id: "{{ api_token_id }}"
@@ -83,7 +83,7 @@
         seconds: 10
 
     - name: Get unprivileged container info
-      community.general.proxmox_vm_info:
+      community.proxmox.proxmox_vm_info:
         api_host: "{{ pve_node_name }}"
         api_user: "{{ api_user }}"
         api_token_id: "{{ api_token_id }}"
@@ -94,7 +94,7 @@
       register: unpriv_container_info
 
     - name: Get privileged container info
-      community.general.proxmox_vm_info:
+      community.proxmox.proxmox_vm_info:
         api_host: "{{ pve_node_name }}"
         api_user: "{{ api_user }}"
         api_token_id: "{{ api_token_id }}"
@@ -206,7 +206,7 @@
   vars_files: ../../vars.yml
   tasks:
     - name: Stop containers
-      community.general.proxmox:
+      community.proxmox.proxmox:
         api_host: "{{ pve_node_name }}"
         api_user: "{{ api_user }}"
         api_token_id: "{{ api_token_id }}"
@@ -223,7 +223,7 @@
         seconds: 10
 
     - name: Create templates
-      community.general.proxmox:
+      community.proxmox.proxmox:
         api_host: "{{ pve_node_name }}"
         api_user: "{{ api_user }}"
         api_token_id: "{{ api_token_id }}"
