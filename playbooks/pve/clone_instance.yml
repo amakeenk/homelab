@@ -24,7 +24,7 @@
       community.general.apt_rpm:
         name:
           - docker-engine
-          - docker-compose
+          - docker-compose-v2
       when: for_docker == "yes"
 
     - name: Configure docker daemon.json
